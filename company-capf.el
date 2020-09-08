@@ -32,6 +32,14 @@
 (require 'company)
 (require 'cl-lib)
 
+(defgroup company-capf nil
+  "Completion backend for `completion-at-point'."
+  :group 'company)
+
+(defcustom company-capf-supported-evil-states `(insert replace emacs)
+  "The `evil-state's which `completion-at-point' function can be requested."
+  :type '(repeat symbol))
+
 ;; Amortizes several calls to a c-a-p-f from the same position.
 (defvar company--capf-cache nil)
 
@@ -101,6 +109,9 @@ so we can't just use the preceding variable instead.")
          (let ((length (plist-get (nthcdr 4 res) :company-prefix-length))
                (prefix (buffer-substring-no-properties (nth 1 res) (point))))
            (cond
+            ((and (boundp 'evil-state)
+                  (not (memq evil-state company-capf-supported-evil-states)))
+             'stop)
             ((> (nth 2 res) (point)) 'stop)
             (length (cons prefix length))
             (t prefix))))))
