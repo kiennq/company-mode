@@ -28,6 +28,7 @@
 (require 'company)
 (require 'company-dabbrev)
 (require 'cl-lib)
+(require 'seq)
 
 (defgroup company-dabbrev-code nil
   "dabbrev-like completion backend for code."
@@ -45,14 +46,23 @@ complete only symbols, not text in comments or strings.  In other modes
   :type '(choice (repeat :tag "Some modes" (symbol :tag "Major mode"))
                  (const :tag "All modes" t)))
 
+(defcustom company-dabbrev-code-mode-groups
+  '((c-mode c++-mode c-ts-base-mode))
+  "Group of modes that use the same `company-dabbrev-code'.
+In all of the modes in a same group, `company-dabbrev-code' will offer same
+suggestions."
+  :type '(repeat :tag "Mode groups" (repeat :tag "Group" (symbol :tag "Major mode"))))
+
 (defcustom company-dabbrev-code-other-buffers t
   "Determines whether `company-dabbrev-code' should search other buffers.
 If `all', search all other buffers, except the ignored ones.  If t, search
-buffers with the same major mode.  If `code', search all buffers with major
-modes in `company-dabbrev-code-modes', or derived from one of them.  See
-also `company-dabbrev-code-time-limit'."
+buffers with the same major mode.  If `group', search all buffers with major
+modes in the same group in `company-dabbrev-code-modes'.  If `code', search all
+buffers with major modes in `company-dabbrev-code-modes', or derived from one of
+them.  See also `company-dabbrev-code-time-limit'."
   :type '(choice (const :tag "Off" nil)
                  (const :tag "Same major mode" t)
+                 (const :tag "Code major mode groups" group)
                  (const :tag "Code major modes" code)
                  (const :tag "All" all)))
 
@@ -120,6 +130,10 @@ comments or strings."
             (pcase company-dabbrev-code-other-buffers
               (`t (list major-mode))
               (`code company-dabbrev-code-modes)
+              (`group (or (seq-find (lambda (group)
+                                      (apply #'derived-mode-p group))
+                                    company-dabbrev-code-mode-groups)
+                          (list major-mode)))
               (`all `all))
             (not company-dabbrev-code-everywhere)))
          :expire t
